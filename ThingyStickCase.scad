@@ -1,3 +1,4 @@
+$fn=100;  
 
 // Size of the outer (bezel/padding/blah) that surounds the PCB
 // NB: This is both length and width padding.
@@ -8,10 +9,16 @@ pcbPaddingXAxis = 1; // 1mm from the wall.
 // Thickness of the wall.
 wallThickness = 1.5;
 
+useRoundedTopAndBottom = true;
+
 ////////////////////////////////////////////////////////////////////////
 // Uniqie for each PCB.
 ////////////////////////////////////////////////////////////////////////
 // PCB size we are trying to fit.
+/*
+// -----------------------
+// Wide Photon Prototype.
+// -----------------------
 pcbHeight = 40;
 pcbWidth = 100;
 // How thick (deep) the PCB is (typically 1.6mm)
@@ -19,15 +26,100 @@ pcbThickness = 1.6;
 
 // Support positions on the PCBs, relatec to the PCB corner.
 // does not include bezel/wall thinckness offsets
-pcbSupportPositions = [[4,36,0],[96,4,0]];
+pcbSupportPositions = []; // [[4,36,0],[96,4,0]];
 pcbSupportHeight = 8;
 
-pcbSupportPinPositions = [[4,4,0],[96,36,0]];
+pcbSupportPinPositions = [[4,4,0],[96,36,0],[4,36,0],[96,4,0]];
 pcbSupportHeight = 8;
 
 // How much above the USB A connector inlet to add the the base case height.
 // Typical is 0mm.
 additionalBaseDepth = 0;
+
+// Y start position and how far along
+// Compute the X start and end based on case size
+// Compute the Z start position base and size based on
+// the support heights, base height, top height and cutout height required.
+endCutoutYStartPosition = 10;
+endCutoutHeight = 20;
+// Overall Z height - shared between base and top
+endCutoutZHeight = 8; 
+includeEndCutout = false;
+
+*/
+
+/*
+// -----------------------
+// Quat N-Channel FETS 
+// -----------------------
+pcbHeight = 40;
+pcbWidth = 100;
+// How thick (deep) the PCB is (typically 1.6mm)
+pcbThickness = 1.6;
+
+// Support positions on the PCBs, relatec to the PCB corner.
+// does not include bezel/wall thinckness offsets
+pcbSupportPositions = []; // [[4,36,0],[96,4,0]];
+//pcbSupportHeight = 8;
+
+pcbSupportPinPositions = [[14.5,20,0],[95,4,0],[95,36,0]];
+// support height from z=0, not the inside of the case.
+pcbSupportHeight = 4;
+
+// How much above the USB A connector inlet to add the the base case height.
+// Typical is 0mm.
+additionalBaseDepth = 0;
+
+// This configuration directly expose the full width
+// of the 5 way connector.
+// 10-30 on Y scale.
+
+// Y start position and how far along
+// Compute the X start and end based on case size
+// Compute the Z start position base and size based on
+// the support heights, base height, top height and cutout height required.
+endCutoutYStartPosition = 10;
+endCutoutHeight = 20;
+// Overall Z height - shared between base and top
+endCutoutZHeight = 8; 
+includeEndCutout = true;
+*/
+
+// -----------------------
+// Electron Prototype
+// -----------------------
+pcbHeight = 44;
+pcbWidth = 100;
+// How thick (deep) the PCB is (typically 1.6mm)
+pcbThickness = 1.6;
+
+// Support positions on the PCBs, relatec to the PCB corner.
+// does not include bezel/wall thinckness offsets
+pcbSupportPositions = []; // [[4,36,0],[96,4,0]];
+//pcbSupportHeight = 8;
+
+pcbSupportPinPositions = [[14.5,22,0],[96,4,0],[96,40,0]];
+// support height from z=0, not the inside of the case.
+pcbSupportHeight = 4;
+
+// How much above the USB A connector inlet to add the the base case height.
+// Typical is 0mm.
+additionalBaseDepth = 0;
+
+// This configuration directly expose the full width
+// of the 5 way connector.
+// 10-30 on Y scale.
+
+// Y start position and how far along
+// Compute the X start and end based on case size
+// Compute the Z start position base and size based on
+// the support heights, base height, top height and cutout height required.
+endCutoutYStartPosition = 8;
+endCutoutHeight = 28;
+// Overall Z height - shared between base and top
+endCutoutZHeight = 6; 
+includeEndCutout = false;
+
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -54,46 +146,87 @@ includePhotonUsbSocketCutout = false;
 usbConnectorHeight = 5;
 
 // How think the bottom of the base is.
-baseInnerThickness = 2;
+baseInnerThickness = 1.5;
 
 // Overall size
 // Y Size
 height = pcbHeight + (2*pcbPaddingYAxis) + (2*wallThickness);
+echo("Height (Y)" , height);
+
 // X axis size.
 width = pcbWidth + (2*pcbPaddingXAxis) + (2*wallThickness);
+echo("Width (X)" , width);
 
 baseDepth = (pcbSupportHeight + usbConnectorHeight) + additionalBaseDepth;
 // This will vary based on the ThingyStick
-coverDepth = 15;
+coverDepth = 17; // min 15mm with photon in socket.
 
 // Build options.
 showBase = true;
-showCover = false;
+showCover = true;
 
+curveRadius = 2; // was 4
 
 // -----------------------------------------
 // -----------------------------------------
-module GenericBase(xDistance, yDistance, zHeight) {
-	// roundedBox([xDistance, yDistance, zHeight], 2, true);
-
-	// Create a rectangluar base to work from that
-	// is xDistance by yDistance and zHeight height.
-
-	// This is effectivly a cube with rounded corners
-
-	// extend the base out by ... from holes by using minkowski
-	// which gives rounded corners to the board in the process
-	// matching the Gadgeteer design
-	
-	$fn=50;
-	radius = 4; //bezelSize;
-
-	translate([radius,radius,0]) {
+module GenericBase(xDistance, yDistance, zHeight, zAdjust) {
+	    
+    // NB: base drops below 0 line by the curve radius so we need to compensate for that
+	translate([curveRadius,curveRadius, zAdjust]) {
 		minkowski()
 		{
 			// 3D Minkowski sum all dimensions will be the sum of the two object's dimensions
-			cube([xDistance-(radius*2), yDistance-(radius*2), zHeight /2]);
-			cylinder(r=radius,h=zHeight/2);
+			cube([xDistance-(curveRadius*2), yDistance-(curveRadius*2), (zHeight /2)]);
+			cylinder(r=curveRadius,h= (zHeight/2) + curveRadius);
+		}
+	}
+}
+
+module RoundedBase(xDistance, yDistance, zHeight) {
+    
+    // Lower part with all rounded edges.
+    translate([curveRadius,curveRadius,0]) {
+		minkowski()
+		{
+			// 3D Minkowski sum all dimensions will be the sum of the two object's dimensions
+			cube([xDistance-(curveRadius*2), yDistance-(curveRadius*2), curveRadius]);
+			//cylinder(r=radius,h=zHeight/2);
+            sphere(r=curveRadius);
+		}
+	}  
+
+    // Upper part with rounded coners and flat top/bottom.
+	translate([curveRadius,curveRadius,curveRadius]) {
+		minkowski()
+		{
+			// 3D Minkowski sum all dimensions will be the sum of the two object's dimensions
+			cube([xDistance-(curveRadius*2), yDistance-(curveRadius*2), ((zHeight /2))]);
+			cylinder(r=curveRadius,h= (zHeight/2) - curveRadius);
+		}
+	}
+}
+
+
+module RoundedTop(xDistance, yDistance, zHeight) {
+    
+    // Lower part with all rounded edges.
+    translate([curveRadius,curveRadius,zHeight-curveRadius]) {
+		minkowski()
+		{
+			// 3D Minkowski sum all dimensions will be the sum of the two object's dimensions
+			cube([xDistance-(curveRadius*2), yDistance-(curveRadius*2), curveRadius]);
+			//cylinder(r=radius,h=zHeight/2);
+            sphere(r=curveRadius);
+		}
+	}  
+
+    // Upper part with rounded coners and flat top/bottom.
+	translate([curveRadius,curveRadius,0]) {
+		minkowski()
+		{
+			// 3D Minkowski sum all dimensions will be the sum of the two object's dimensions
+			cube([xDistance-(curveRadius*2), yDistance-(curveRadius*2), ((zHeight /2))]);
+			cylinder(r=curveRadius,h= (zHeight/2) - curveRadius);
 		}
 	}
 }
@@ -107,7 +240,12 @@ innerCutoutOffset = wallThickness;
     
 	difference() {
 		union() {
-			GenericBase(width, height, baseDepth);
+            if (useRoundedTopAndBottom) {
+                // rounded base doesn't print well on Ultimaker.
+                RoundedBase(width, height, baseDepth);
+            } else {
+                GenericBase(width, height, baseDepth);
+            }
 		}
 		union() {
 			// Cut out the bulk of the inside of the box.
@@ -115,9 +253,10 @@ innerCutoutOffset = wallThickness;
 			// Move in 5, down 5 and up 2 to provide an 
 			// outline of 5x5 with 2 base.
 			translate([innerCutoutOffset, innerCutoutOffset, baseInnerThickness]) {
-				GenericBase(width - (innerCutoutOffset * 2), 
+				#GenericBase(width - (innerCutoutOffset * 2), 
 									height - (innerCutoutOffset *2), 
-									(baseDepth - baseInnerThickness) + 0.1);
+									(baseDepth - baseInnerThickness) + 0.1,
+                                    -curveRadius);
 			}
 		}
 	}
@@ -166,13 +305,31 @@ module addSupports() {
 }
 
 module usbPlugCutout() {
+    
+// TODO: Verify this.
+usbPlugWidth = 13;
+    
     // Offset for PCB origin
     translate([wallThickness + pcbPaddingXAxis, wallThickness + pcbPaddingYAxis, 0]) {
         // Offset Y for middle of the PCB minus 1/2 of the size of the 
         // USB plug. Assumes plug allignes with the bottom of the PCB.
-        translate([-10 - (wallThickness + pcbPaddingXAxis),(pcbHeight/2) -7 ,pcbSupportHeight]) {
-            #cube([10 + wallThickness + pcbPaddingXAxis,14,5+0.1]);
+        translate([-10 - (wallThickness + pcbPaddingXAxis),(pcbHeight/2) - (usbPlugWidth/2) ,pcbSupportHeight]) {
+            #cube([10 + wallThickness + pcbPaddingXAxis,usbPlugWidth,5+0.1]);
         }
+    }
+}
+
+module baseEndCutout() {
+   
+    zStart = pcbSupportHeight + pcbThickness;
+    echo(zStart);
+    
+    // Move to the end of the case just before the wall starts.
+    // cut out the thinkness of the wall + a little extra
+    translate([width - (wallThickness + 0.1), endCutoutYStartPosition + pcbPaddingYAxis + wallThickness, zStart]) {
+        // Z height shouldn't matter with the base as it should always
+        // go above the top of it (otherwise we need supports/bridging)
+        #cube([wallThickness + 0.2, endCutoutHeight, endCutoutZHeight]);
     }
 }
 
@@ -204,6 +361,9 @@ module Base() {
             if (includeUsbPlugCutout) {
                 usbPlugCutout();
             }
+            if (includeEndCutout) {
+                baseEndCutout();
+            }
 		}
 	}
 }
@@ -219,17 +379,18 @@ innerCutoutOffset = wallThickness;
     
 	difference() {
 		union() {
-			GenericBase(width, height, coverDepth);
+			RoundedTop(width, height, coverDepth);
 		}
 		union() {
 			// Cut out the bulk of the inside of the box.
 			// Outerwall padding = 5
 			// Move in 5, down 5 and up 2 to provide an 
 			// outline of 5x5 with 2 base.
-			translate([innerCutoutOffset, innerCutoutOffset, 0]) {
-				GenericBase(width - (innerCutoutOffset * 2), 
+			translate([innerCutoutOffset, innerCutoutOffset, -0.01]) {
+				#GenericBase(width - (innerCutoutOffset * 2), 
 									height - (innerCutoutOffset *2), 
-									(coverDepth - baseInnerThickness) + 0.1);
+									(coverDepth - baseInnerThickness),
+                                    0);
 			}
 		}
 	}
@@ -245,7 +406,7 @@ module pcbSupportPeg(position,height) {
             }
             union() {
                 // 3mm + a little tolerance
-                #cylinder(d1=3.5, h=5, $fn=50);    
+                #cylinder(d1=3.5, d2=3.2, h=(height - 2), $fn=50);    
             }
         }
         
@@ -257,7 +418,6 @@ module addPcbSupportPegs() {
     
 zOffset =  baseDepth - pcbSupportHeight - pcbThickness; 
     
-echo(zOffset);
     // Offset the position for the case parameters.
     // Needs to come down into the base by xxx - pcbThickness.
     translate([wallThickness + pcbPaddingXAxis, wallThickness + pcbPaddingYAxis, -zOffset]) {
@@ -276,9 +436,13 @@ echo(zOffset);
 module addLatchingRunners() {
 // How far into the base.
 // Don't go further than the PCB.
-zOffset =  baseDepth - pcbSupportHeight - pcbThickness;
-runnerLength = 15;
-runnerDepth = 1.5;
+//zOffset =  baseDepth - pcbSupportHeight - pcbThickness;
+
+// Or, with spacing around PCB, allow depth of latches to go deeper.
+zOffset =  baseDepth - (2*wallThickness); // double wall to allow for a bit of slack
+    
+runnerLength = 15; 
+runnerDepth = 1.5; 
    
     
     // Near side
@@ -301,6 +465,27 @@ runnerDepth = 1.5;
     }
 }
 
+module coverEndCutout() {
+    // todo...
+    
+    // Compute how much of the end cutout was cut into the base.
+    zStart = pcbSupportHeight + pcbThickness;
+    zHeightInBase = baseDepth - zStart;
+    // What ever wasn't cut into the base needs to go into the cover.
+    zHeightInCover = endCutoutZHeight - zHeightInBase;
+    echo(zHeight);
+    
+    // coverDepth
+    
+    // Move to the end of the case just before the wall starts.
+    // cut out the thinkness of the wall + a little extra
+    translate([width - (wallThickness + 0.1), endCutoutYStartPosition + pcbPaddingYAxis + wallThickness, 0]) {
+        // Z height shouldn't matter with the base as it should always
+        // go above the top of it (otherwise we need supports/bridging)
+        #cube([wallThickness + 0.2, endCutoutHeight, zHeightInCover]);
+    }
+}
+
 // -----------------------------------------
 // -----------------------------------------
 module Cover() {
@@ -317,6 +502,10 @@ module Cover() {
             if (includePhotonUsbSocketCutout) {
                 // TODO: Cutout USB Micro B hole for lead to connect to Photon
             }
+            
+            if (includeEndCutout) {
+                coverEndCutout();
+            }
 		}
 	}
 }
@@ -327,7 +516,8 @@ if (showBase) {
 
 if (showCover) {
     // Offset the cover
-    translate([0,0,100]) {
+    //translate([0,0,100]) {
+    translate([0,0,baseDepth+4]) {
         Cover();
     }
 }
