@@ -3,131 +3,15 @@ $fn=100;
 // Size of the outer (bezel/padding/blah) that surounds the PCB
 // NB: This is both length and width padding.
 //bezelSize = 3;
-pcbPaddingYAxis = 3;
-pcbPaddingXAxis = 1; // 1mm from the wall.
+
+// Override in case
+//pcbPaddingYAxis = 3;
+//pcbPaddingXAxis = 1; // 1mm from the wall.
 
 // Thickness of the wall.
 wallThickness = 1.5;
 
-useRoundedTopAndBottom = true;
-
-////////////////////////////////////////////////////////////////////////
-// Uniqie for each PCB.
-////////////////////////////////////////////////////////////////////////
-// PCB size we are trying to fit.
-/*
-// -----------------------
-// Wide Photon Prototype.
-// -----------------------
-pcbHeight = 40;
-pcbWidth = 100;
-// How thick (deep) the PCB is (typically 1.6mm)
-pcbThickness = 1.6;
-
-// Support positions on the PCBs, relatec to the PCB corner.
-// does not include bezel/wall thinckness offsets
-pcbSupportPositions = []; // [[4,36,0],[96,4,0]];
-pcbSupportHeight = 8;
-
-pcbSupportPinPositions = [[4,4,0],[96,36,0],[4,36,0],[96,4,0]];
-pcbSupportHeight = 8;
-
-// How much above the USB A connector inlet to add the the base case height.
-// Typical is 0mm.
-additionalBaseDepth = 0;
-
-// Y start position and how far along
-// Compute the X start and end based on case size
-// Compute the Z start position base and size based on
-// the support heights, base height, top height and cutout height required.
-endCutoutYStartPosition = 10;
-endCutoutHeight = 20;
-// Overall Z height - shared between base and top
-endCutoutZHeight = 8; 
-includeEndCutout = false;
-
-textPosition = [30,21,-3];
-textText = "Photon";
-
-*/
-
-/*
-// -----------------------
-// Quat N-Channel FETS 
-// -----------------------
-pcbHeight = 40;
-pcbWidth = 100;
-// How thick (deep) the PCB is (typically 1.6mm)
-pcbThickness = 1.6;
-
-// Support positions on the PCBs, relatec to the PCB corner.
-// does not include bezel/wall thinckness offsets
-pcbSupportPositions = []; // [[4,36,0],[96,4,0]];
-//pcbSupportHeight = 8;
-
-pcbSupportPinPositions = [[14.5,20,0],[95,4,0],[95,36,0]];
-// support height from z=0, not the inside of the case.
-pcbSupportHeight = 4;
-
-// How much above the USB A connector inlet to add the the base case height.
-// Typical is 0mm.
-additionalBaseDepth = 0;
-
-// This configuration directly expose the full width
-// of the 5 way connector.
-// 10-30 on Y scale.
-
-// Y start position and how far along
-// Compute the X start and end based on case size
-// Compute the Z start position base and size based on
-// the support heights, base height, top height and cutout height required.
-endCutoutYStartPosition = 10;
-endCutoutHeight = 20;
-// Overall Z height - shared between base and top
-endCutoutZHeight = 8; 
-includeEndCutout = true;
-
-textPosition = [30,21,-3];
-textText = "N FET";
-*/
-
-// -----------------------
-// Electron Prototype
-// -----------------------
-pcbHeight = 44;
-pcbWidth = 100;
-// How thick (deep) the PCB is (typically 1.6mm)
-pcbThickness = 1.6;
-
-// Support positions on the PCBs, relatec to the PCB corner.
-// does not include bezel/wall thinckness offsets
-pcbSupportPositions = [[96,4,0],[96,40,0]];
-//pcbSupportHeight = 8;
-
-pcbSupportPinPositions = [[14.5,22,0]];
-// support height from z=0, not the inside of the case.
-pcbSupportHeight = 3;
-
-// How much above the USB A connector inlet to add the the base case height.
-// Typical is 0mm.
-additionalBaseDepth = 0;
-
-// This configuration directly expose the full width
-// of the 5 way connector.
-// 10-30 on Y scale.
-
-// Y start position and how far along
-// Compute the X start and end based on case size
-// Compute the Z start position base and size based on
-// the support heights, base height, top height and cutout height required.
-endCutoutYStartPosition = 8;
-endCutoutHeight = 28;
-// Overall Z height - shared between base and top
-endCutoutZHeight = 6; 
-includeEndCutout = false;
-textPosition = [30,21,-3];
-textText = "Electron";
-
+useRoundedTopAndBottom = false;
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -172,11 +56,6 @@ echo("Width (X)" , width);
 baseDepth = (pcbSupportHeight + usbConnectorHeight) + additionalBaseDepth;
 //baseDepth = 8;
 echo("baseDepth (Z)" , baseDepth);
-
-// This will vary based on the ThingyStick
-coverDepth = 17; // Socketed Photon (min 15mm with photon in socket).
-//coverDepth = 6;  // Photon directly on the PCB.
-echo("coverDepth (Z)" , coverDepth);
 
 // Build options.
 showBase = false;
@@ -308,7 +187,10 @@ echo("baseDepth",baseDepth);
                 // rounded base doesn't print well on Ultimaker.
                 RoundedBase(width, height, baseDepth);
             } else {
-                GenericBase(width, height, baseDepth);
+                // Compensate for the rounding missing
+                translate([0,0,-curveRadius]) {
+                    GenericBase(width, height, baseDepth-curveRadius);
+                }
             }
 		}
 		union() {
@@ -338,6 +220,25 @@ module pcbSupport(position, height) {
             union() {
                 translate(0,0,baseInnerThickness) {
                     cylinder(d=screwHoldSize, h=height, $fn=50);
+                }
+            }
+        }
+    }
+}
+
+module pcbSupportPad(position, height) {
+    color("green") {
+        // Lift off the Z axis floor a little to stop the 
+        // edges sticking out where the mount is on a curved conrer.
+        translate(position) {
+            difference() {
+                union() {
+                    cylinder(d=8, h=height);
+                }
+                union() {
+                    translate([0,0,2.1]) {
+                        cylinder(d=4.2, h=height-2);    
+                    }
                 }
             }
         }
@@ -403,7 +304,6 @@ module addCountersinks() {
         }
     }
 }
-
 module addSupports() {
     
     // Offset to be ON the top of the base floor
@@ -414,7 +314,7 @@ module addSupports() {
     // Offset the position for the case parameters.
     translate([wallThickness + pcbPaddingXAxis, wallThickness + pcbPaddingYAxis, zOffset]) {
         
-        // Add PCB supports with holes for screws
+        // Add PCB supports with holes for screws through the base.
         for(pcbSupportPosition = pcbSupportPositions) {
             pcbSupportScrewHole(pcbSupportPosition, pcbSupportHeight);
         }
@@ -423,13 +323,21 @@ module addSupports() {
         for(pcbSupportPinPosition = pcbSupportPinPositions) {
             pcbSupportPin(pcbSupportPinPosition, pcbSupportHeight);
         }
+        
+        // Add PCB supports with holes for screws through the base.
+        for(pcbSupportPadPosition = pcbSupportPadPositions) {
+            pcbSupportPad(pcbSupportPadPosition, pcbSupportHeight);
+        }
     }
 }
 
 module usbPlugCutout() {
     
-// TODO: Verify this.
-usbPlugWidth = 13;
+// This will be too low.
+
+    
+// TODO: Verify this. (12mm in Eagle).
+usbPlugWidth = 14;
     
 zOffset = -curveRadius + baseInnerThickness;
     
@@ -437,15 +345,19 @@ zOffset = -curveRadius + baseInnerThickness;
     translate([wallThickness + pcbPaddingXAxis, wallThickness + pcbPaddingYAxis, zOffset]) {
         // Offset Y for middle of the PCB minus 1/2 of the size of the 
         // USB plug. Assumes plug allignes with the bottom of the PCB.
-        translate([-10 - (wallThickness + pcbPaddingXAxis),(pcbHeight/2) - (usbPlugWidth/2) ,pcbSupportHeight]) {
-            cube([10 + wallThickness + pcbPaddingXAxis,usbPlugWidth,5+0.1]);
+        // +/- 1mm on USB plug height
+        translate([-10 - (wallThickness + pcbPaddingXAxis),(pcbHeight/2) - (usbPlugWidth/2), pcbSupportHeight - 1]) {
+            #cube([10 + wallThickness + pcbPaddingXAxis,usbPlugWidth,6+0.1]);
         }
     }
 }
 
+
+
 module baseEndCutout() {
    
-    zStart = pcbSupportHeight + pcbThickness;
+    // remove pcbSupportHeight?
+    zStart = pcbSupportHeight + pcbThickness + endCutoutZAdjust;
     echo(zStart);
     
     // Move to the end of the case just before the wall starts.
@@ -460,7 +372,7 @@ module baseEndCutout() {
 // Add some text to the base.
 module addText() {
     translate(textPosition) {
-        linear_extrude(height = 1) {
+        linear_extrude(height = 1.5) {
             text(textText);
         }
     }
@@ -474,11 +386,74 @@ module marker() {
     }
 }
 
+// Make a compartment around the 
+module makeBatteryCompartment() {
+    
+batteryCompartmentSize = [76,44,12];
+    
+pin = pcbSupportPinPositions[0];
+batteryStartX = pin[0] 
+    ;
+batteryStartY = (height/2) - (batteryCompartmentSize[1]/2);
+    
+    
+    difference() {
+        union() {
+            translate([batteryStartX-2, batteryStartY, wallThickness]) {
+                color("red") {
+                    cube(batteryCompartmentSize);
+                }
+            }
+        }
+        union() {
+            showBatteryModel();
+        }
+    }
+}
+
+module showBatteryModel() {
+// batterySize = [53,35,12.1]; - good fit. 
+batterySize = [56,37,12.1];
+// Assume the 1st pin is for the middle "under" photon/electron pin.
+pin = pcbSupportPinPositions[0];
+
+batteryStartX = pin[0] + 10;
+batteryStartY = (height/2) - (batterySize[1]/2);
+    
+    
+    color("grey") {
+        translate([batteryStartX, batteryStartY,wallThickness]) {
+            // battery
+            cube(batterySize);
+        
+            // TODO: From battery to wall.
+            // Wide height the same as battery to give a better cutout.
+            translate([0,-5,5]) {
+                // wires...
+                cube([4,10,batterySize[2]-5]);
+            }
+        }
+    }
+}
+
+module battery() {
+    if (showBattery) {
+        showBatteryModel();
+    }
+    
+    if (includeBatteryCompartment) {
+        makeBatteryCompartment();
+    }
+}
+
 // -----------------------------------------
 // -----------------------------------------
 module Base() {
-	
+    	
 	innerWallOffset = 4;
+    
+    echo("X Offset", wallThickness + pcbPaddingXAxis);
+    echo("Y Offset", wallThickness + pcbPaddingYAxis);
 
 	difference() {
 		union() 
@@ -486,20 +461,37 @@ module Base() {
 			// Outer base wall
 			OuterWall();
             addSupports();
-            addText();
+            
+            if (includeText) {
+                addText();
+            }
+            
+            if (useRoundedTopAndBottom) {
+                battery();
+            } else {
+                translate([0,0,-curveRadius]) {
+                    battery();
+                } 
+            }
             //marker();
 		}		
 		union() 
 		{
 			//PcbCutout(); 
-            if (includeUsbPlugCutout) {
-                usbPlugCutout();
-            }
+            
+            // Add this to case specific extraCutouts...
+            //if (includeUsbPlugCutout) {
+            //    usbPlugCutout();
+            //}
+
             if (includeEndCutout) {
                 baseEndCutout();
             }
-            
+                        
             addCountersinks();
+            
+            // Implement in case specific file...
+            extraCutouts();
 		}
 	}
 }
@@ -508,6 +500,37 @@ module Base() {
 // COVER
 // =========================================================================================
 
+module arialCutouts() {
+    // Position 53mm from front edge.
+    // Add in both sides.
+    
+    // Move out by wallThickness.
+    
+    translate([54, 4.5, 6]) {
+        
+        // rotate to it's pointing to the other wall.
+        rotate([90,0,0]) {
+            #cylinder(d=2, h=wallThickness * 3);
+        }
+        translate([-1, -4.5, -6]) {
+            #cube([2,wallThickness *3,6]);
+            
+        }
+    }
+    
+    translate([53, height-wallThickness+2, 6]) {
+        
+        // rotate to it's pointing to the other wall.
+        rotate([90,0,0]) {
+            #cylinder(d=2, h=wallThickness * 3);
+        }
+        translate([-1, -4.5, -6]) {
+            #cube([2,wallThickness *3,6]);
+            
+        }
+    }
+}
+
 // Main body for cover.
 module CoverOuterWall() {
 
@@ -515,16 +538,27 @@ innerCutoutOffset = wallThickness;
     
 	difference() {
 		union() {
-			RoundedTop(width, height, coverDepth);
+
+            translate([0,0,curveRadius]) {
+                GenericBase(width, height, coverDepth-curveRadius);
+            }
+            
+            // 0.2mm tollerance for push fit.
+            translate([wallThickness+0.1, wallThickness+0.1,0]) {
+                GenericBase(width - (wallThickness * 2) - 0.2, 
+                                height - (wallThickness *2) - 0.2, 
+                                (coverDepth - baseInnerThickness),
+                                0);
+            }
 		}
 		union() {
 			// Cut out the bulk of the inside of the box.
 			// Outerwall padding = 5
 			// Move in 5, down 5 and up 2 to provide an 
 			// outline of 5x5 with 2 base.
-			translate([innerCutoutOffset, innerCutoutOffset,]) {
-				GenericBase(width - (innerCutoutOffset * 2), 
-									height - (innerCutoutOffset *2), 
+			translate([innerCutoutOffset+1.25, innerCutoutOffset+1.25,-0.1]) {
+				GenericBase(width - (innerCutoutOffset * 2)-2.5, 
+									height - (innerCutoutOffset *2)-2.5, 
 									(coverDepth - baseInnerThickness),
                                     0);
 			}
@@ -549,7 +583,7 @@ module pcbSupportPeg(position,height) {
     }
 }
 
-module pcbScrewMountPen(position,height) {
+module pcbScrewMountPeg(position,height) {
            
     // Offset the position for it's PCB position
     color("blue") {
@@ -569,12 +603,27 @@ module pcbScrewMountPen(position,height) {
 
 // Used in the cover to for the screws from the base to connect into.
 module addPcbSupportPegs() {
+
+// Where the wall begins.    
+zZero = -curveRadius; //(coverDepth - curveRadius);
     
-zOffset =  baseDepth - pcbSupportHeight - pcbThickness; 
+// How much to add to the pegs to protrude into the base.
+extendZBy = baseDepth - pcbSupportHeight - pcbThickness; 
+echo ("extendZBy", extendZBy);
+    
+// Peg needs to go the full length of the case
+// -0.5 hack to stop Cura printing detailed bits first instead of flat
+pegHeight = coverDepth -baseInnerThickness + extendZBy; // + baseInnerThickness;// <- puts the peg into the wall.
+echo ("pegHeight", pegHeight);
+   
+
+// The start Z position of the peg. This needs to be corrected for the 
+// peg height so that it touches the inner surface of the wall.
+pegZStart = curveRadius - extendZBy; // -0.5;
     
     // Offset the position for the case parameters.
     // Needs to come down into the base by xxx - pcbThickness.
-    translate([wallThickness + pcbPaddingXAxis, wallThickness + pcbPaddingYAxis, -zOffset]) {
+    translate([wallThickness + pcbPaddingXAxis, wallThickness + pcbPaddingYAxis, pegZStart]) {
         
         // Only the center pin under the photon uses pins now
         // ald theirs no point in having the top peg for it
@@ -589,48 +638,11 @@ zOffset =  baseDepth - pcbSupportHeight - pcbThickness;
         // Add screw nut mounts (where base has a screw hole protruding through
         // Add PCB supports with pins to help alignment (and save on screws).
         for(pcbSupportPinPosition = pcbSupportPositions) {
-            // Peg needs to go the full length of the case
-            // -0.5 hack to stop Cura printing detailed bits first instead of flat
-            pcbScrewMountPen(pcbSupportPinPosition, coverDepth + zOffset - 0.5);
+            pcbScrewMountPeg(pcbSupportPinPosition, pegHeight);
         }
     }
 }
 
-// Add some runners to the inside of the walls 
-// to (friction) latch the case together.
-module addLatchingRunners() {
-
-// This is where the wall begins (open side).
-zZero = -curveRadius; //(coverDepth - curveRadius);
-    
-// How far in from the x axis edge.
-runnerEdgeOffset = 15;
-// Y Axis depth.    
-runnerDepth = 1.5; 
-    
-// How far into the base.
-// runner Overlap into the base .
-runnerOverlap = 3;
-   
-    // Set the z position so the runners start at the "inner floor" of the cover.
-    translate([0,0,- (zZero + runnerOverlap)]) {
-    
-        // Near side
-        translate([runnerEdgeOffset, wallThickness, 0]) {
-            // -0.5 hack to stop Cura printing detailed bits first instead of flat
-            //cube([width - (runnerEdgeOffset * 2),runnerDepth,coverDepth + zOffset-0.5]);
-            
-            // runner height = coverDepth - baseInnerThickness -> gives the wall height from inside.
-            // Add on the extra required to sit inside the base...
-            cube([width - (runnerEdgeOffset * 2),runnerDepth,coverDepth - baseInnerThickness + runnerOverlap]);
-        }
-            
-        // Far side.
-        translate([runnerEdgeOffset, height - wallThickness- runnerDepth, 0]) {
-            cube([width - (runnerEdgeOffset * 2),runnerDepth,coverDepth - baseInnerThickness + runnerOverlap]);
-        }
-    }
-}
 
 module coverEndCutout() {
     // todo...
@@ -661,8 +673,7 @@ module Cover() {
 		union() {
 			CoverOuterWall();
             // Add snaps to align top and hold it into place.
-            addPcbSupportPegs();
-            addLatchingRunners();
+            //addPcbSupportPegs();
 		}
 		union() {
             //
@@ -673,18 +684,25 @@ module Cover() {
             if (includeEndCutout) {
                 coverEndCutout();
             }
+            
+            if (includeArialCutouts) {
+                arialCutouts();
+            }
 		}
 	}
 }
 
-if (showBase) {
-    Base();
-}
+module buildCase() {
 
-if (showCover) {
-    // Offset the cover
-    //translate([0,0,100]) {
-    translate([0,0,baseDepth+4]) {
-        Cover();
+    if (showBase) {
+        Base();
+    }
+
+    if (showCover) {
+        // Offset the cover
+        //translate([0,0,100]) {
+        translate([0,0,baseDepth+4]) {
+            Cover();
+        }
     }
 }
