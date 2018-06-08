@@ -6,7 +6,7 @@ pcbWidth = 72;
 pcbThickness = 1.6;
 
 pcbPaddingYAxis = 2;
-pcbPaddingXAxis = 2; 
+pcbPaddingXAxis = 1; 
 
 // Support positions on the PCBs, relatec to the PCB corner.
 // does not include bezel/wall thinckness offsets
@@ -18,7 +18,7 @@ pcbSupportHeight = 8;
 
 
 // How much above the USB A connector inlet to add the the base case height.
-additionalBaseDepth = 18; // With Photon in headers.
+additionalBaseDepth = 12; // With Photon in headers.
 //additionalBaseDepth = 12; // Without Photon mounted in headers.
 
 // Y start position and how far along
@@ -101,8 +101,8 @@ zOffset = -curveRadius + baseInnerThickness;
 */
 
 module extraCutouts() {
-    translate([width-3,(height-17)/2, pcbSupportHeight]) {
-        #cube([5,17,14]);
+    translate([width-3,(height-16)/2, pcbSupportHeight]) {
+        #cube([5,16,14]);
     }
     
     usbPlugCutout();
