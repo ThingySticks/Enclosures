@@ -58,14 +58,16 @@ baseDepth = (pcbSupportHeight + usbConnectorHeight) + additionalBaseDepth;
 echo("baseDepth (Z)" , baseDepth);
 
 // Build options.
-showBase = false;
-showCover = true;
+showBase = true;
+showCover = false;
 
 curveRadius = 4; // was 4
 
 // -----------------------------------------
 // -----------------------------------------
 module GenericBase(xDistance, yDistance, zHeight, zAdjust) {
+    
+echo("zAdjust",zAdjust);
 	    
     // NB: base drops below 0 line by the curve radius so we need to compensate for that
 	translate([curveRadius,curveRadius, zAdjust]) {
@@ -189,7 +191,7 @@ echo("baseDepth",baseDepth);
             } else {
                 // Compensate for the rounding missing
                 translate([0,0,-curveRadius]) {
-                    GenericBase(width, height, baseDepth-curveRadius);
+                    GenericBase(width, height, baseDepth-curveRadius, 0);
                 }
             }
 		}
@@ -274,7 +276,9 @@ module pcbSupportPin(position, height) {
     // Offset the position for it's PCB position
     translate(position) {
         cylinder(d=6, h=height);
-        cylinder(d=2.9, h=height + (pcbThickness*2));    
+        translate([0,0,height-0.5]) {
+            cylinder(d1=2.8,d2=2.2, h= (pcbThickness+1));    
+        }
     }
 }
 
@@ -331,15 +335,12 @@ module addSupports() {
     }
 }
 
+// USB A Plug on PCB
 module usbPlugCutout() {
     
-// This will be too low.
-
+usbPlugWidth = 12;
     
-// TODO: Verify this. (12mm in Eagle).
-usbPlugWidth = 14;
-    
-zOffset = -curveRadius + baseInnerThickness;
+zOffset = -curveRadius + baseInnerThickness + 0.5;
     
     // Offset for PCB origin
     translate([wallThickness + pcbPaddingXAxis, wallThickness + pcbPaddingYAxis, zOffset]) {
@@ -347,7 +348,33 @@ zOffset = -curveRadius + baseInnerThickness;
         // USB plug. Assumes plug allignes with the bottom of the PCB.
         // +/- 1mm on USB plug height
         translate([-10 - (wallThickness + pcbPaddingXAxis),(pcbHeight/2) - (usbPlugWidth/2), pcbSupportHeight - 1]) {
-            #cube([10 + wallThickness + pcbPaddingXAxis,usbPlugWidth,6+0.1]);
+            cube([10 + wallThickness + pcbPaddingXAxis,usbPlugWidth,6+0.1]);
+        }
+    }
+}
+
+// USB B Socket on Photon
+module photonUsbSocketCutout() {
+    
+// This will be too low.
+
+    
+// Body size of USB Plug.
+usbPlugWidth = 12;
+usbPlugHeight = 7;
+    
+zOffset = -curveRadius + baseInnerThickness + 0;
+    
+    // Offset for PCB origin
+    translate([wallThickness + pcbPaddingXAxis+5, wallThickness + pcbPaddingYAxis, zOffset]) {
+        
+        // Offset Y for middle of the PCB minus 1/2 of the size of the 
+        // USB plug. Assumes plug allignes with the bottom of the PCB.
+        // +/- 1mm on USB plug height
+        
+        // 10.5mm up if using PCB socket for photon.
+        translate([-12 - (wallThickness + pcbPaddingXAxis),(pcbHeight/2) - (usbPlugWidth/2), pcbSupportHeight + pcbThickness + 10.5]) {
+            #cube([12 + wallThickness + pcbPaddingXAxis,usbPlugWidth,usbPlugHeight]);
         }
     }
 }
@@ -478,20 +505,7 @@ module Base() {
 		union() 
 		{
 			//PcbCutout(); 
-            
-            // Add this to case specific extraCutouts...
-            //if (includeUsbPlugCutout) {
-            //    usbPlugCutout();
-            //}
-
-            if (includeEndCutout) {
-                baseEndCutout();
-            }
-                        
             addCountersinks();
-            
-            // Implement in case specific file...
-            extraCutouts();
 		}
 	}
 }
@@ -668,17 +682,38 @@ module coverEndCutout() {
 // -----------------------------------------
 // -----------------------------------------
 module Cover() {
-   
+    
+    CoverOuterWall();
+  
+}
+
+module buildCase() {
+    
     difference() {
-		union() {
-			CoverOuterWall();
-            // Add snaps to align top and hold it into place.
-            //addPcbSupportPegs();
-		}
-		union() {
-            //
+        union() {
+            if (showBase) {
+                Base();
+            }
+
+            if (showCover) {
+                // Offset the cover
+                //translate([0,0,10]) 
+                
+                // 4mm offset below z for the start of case and cover.
+                translate([0,0,baseDepth- (2*curveRadius)]) {
+                    Cover();
+                }
+            }
+        }
+        union() {
+             // USB A Plug
+            if (includeUsbPlugCutout) {
+                usbPlugCutout();
+            }
+            
             if (includePhotonUsbSocketCutout) {
-                // TODO: Cutout USB Micro B hole for lead to connect to Photon
+                // Cutout USB Micro B hole for lead to connect to Photon
+                photonUsbSocketCutout();
             }
             
             if (includeEndCutout) {
@@ -687,22 +722,16 @@ module Cover() {
             
             if (includeArialCutouts) {
                 arialCutouts();
+            }           
+
+            if (includeEndCutout) {
+                baseEndCutout();
             }
-		}
-	}
-}
-
-module buildCase() {
-
-    if (showBase) {
-        Base();
-    }
-
-    if (showCover) {
-        // Offset the cover
-        //translate([0,0,100]) {
-        translate([0,0,baseDepth+4]) {
-            Cover();
+            
+            // Implement in case specific file...
+            extraCutouts();
+            
+            extraLidCutouts();
         }
     }
 }
